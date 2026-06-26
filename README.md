@@ -120,7 +120,7 @@ ISO11820_Python/
 
 ## 8. Git 协作规范
 
-小组开发请先阅读 `GIT_GUIDE.md`。建议每个人使用自己的功能分支开发，提交信息按 `feat(A): add login query` 这种格式书写，由组长 F 统一检查 Pull Request 并合并到 `main`。
+小组开发请先阅读 `GIT_GUIDE.md`。建议每个人使用自己的功能分支开发，提交信息按 `feat(A): 增加登录查询接口` 这种中文格式书写，由组长 F 统一检查 Pull Request 并合并到 `main`。
 
 ## 9. 打包方式
 

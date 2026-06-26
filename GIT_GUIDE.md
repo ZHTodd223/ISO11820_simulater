@@ -65,26 +65,42 @@ python main.py
 提交信息建议使用下面格式：
 
 ```text
-类型(成员): 简短说明
+类型(成员): 中文简短说明
 ```
+
+要求：
+
+- 冒号后面的说明必须写中文。
+- 说明用一句话写清楚“做了什么”。
+- 不要只写 `修改`、`更新`、`修复bug` 这种太模糊的内容。
+- 建议一次 commit 只做一类事情，方便组长 F 审查。
 
 常用类型：
 
 | 类型 | 含义 | 示例 |
 |---|---|---|
-| `feat` | 新功能 | `feat(A): add test history query` |
-| `fix` | 修复问题 | `fix(B): prevent recording before ready` |
-| `docs` | 文档 | `docs(F): update acceptance checklist` |
-| `style` | 样式或格式 | `style(E): adjust main window spacing` |
-| `test` | 测试 | `test(F): add manual report test cases` |
-| `refactor` | 重构 | `refactor(C): split drift calculation helper` |
-| `chore` | 杂项 | `chore(F): update gitignore` |
+| `feat` | 新功能 | `feat(A): 增加历史记录查询接口` |
+| `fix` | 修复问题 | `fix(B): 禁止未就绪时开始记录` |
+| `docs` | 文档 | `docs(F): 更新最终验收测试清单` |
+| `style` | 样式或格式 | `style(E): 调整主界面按钮间距` |
+| `test` | 测试 | `test(F): 补充报告导出手动测试用例` |
+| `refactor` | 重构 | `refactor(C): 拆分温度漂移计算函数` |
+| `chore` | 杂项 | `chore(F): 更新忽略文件配置` |
 
 示例：
 
 ```bash
 git add services/test_controller.py
-git commit -m "feat(B): add fixed duration recording mode"
+git commit -m "feat(B): 增加固定时长记录模式"
+```
+
+更多中文 commit 示例：
+
+```bash
+git commit -m "fix(A): 修复重复初始化默认账号的问题"
+git commit -m "feat(C): 增加校准温度实时显示"
+git commit -m "docs(F): 补充分支合并说明"
+git commit -m "test(D): 增加报告导出检查表"
 ```
 
 ## 5. 推送自己的分支
@@ -177,7 +193,7 @@ git merge main
 ```bash
 git status
 git add .
-git commit -m "feat(A): add database query"
+git commit -m "feat(A): 增加数据库查询接口"
 git pull
 git push
 git branch
