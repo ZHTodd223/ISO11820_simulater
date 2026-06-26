@@ -174,4 +174,4 @@ class DbHelper:
         return [dict(row) for row in rows]
 
     # TODO[A]: 增加按日期范围、操作员、样品编号组合查询接口。
-    # TODO[F]: 组长检查数据库字段与最终报告字段是否完全一致。
+    # TODO[F]: 为历史查询补充导出所需的完整字段。

@@ -1,6 +1,6 @@
 # Git 协作规范
 
-这份规范用于 6 人课程小组协作，目标是让每个人都能安全提交自己的模块，减少冲突，方便组长合并和答辩前回滚。
+这份规范用于 6 人课程小组协作，目标是让每个人都能安全提交自己的模块，减少冲突，方便项目组长合并和答辩前回滚。
 
 ## 1. 第一次拉取项目
 
@@ -29,7 +29,7 @@ python main.py
 | C | `feature/C-simulator-chart` | 仿真与曲线 |
 | D | `feature/D-report-export` | 试验记录与报告 |
 | E | `feature/E-ui-calibration` | UI 与校准 |
-| F | `feature/F-integration-test` | 集成、测试、打包 |
+| F | `feature/F-history-test-package` | 历史查询、测试、打包 |
 
 创建分支：
 
@@ -73,7 +73,7 @@ python main.py
 - 冒号后面的说明必须写中文。
 - 说明用一句话写清楚“做了什么”。
 - 不要只写 `修改`、`更新`、`修复bug` 这种太模糊的内容。
-- 建议一次 commit 只做一类事情，方便组长 F 审查。
+- 建议一次 commit 只做一类事情，方便项目组长审查。
 
 常用类型：
 
@@ -109,7 +109,7 @@ git commit -m "test(D): 增加报告导出检查表"
 git push -u origin feature/A-database-login
 ```
 
-之后在 GitHub 上创建 Pull Request，由组长 F 负责检查和合并。
+之后在 GitHub 上创建 Pull Request，由项目组长负责检查和合并。
 
 ## 6. Pull Request 要求
 
@@ -134,7 +134,7 @@ PR 描述模板：
 - [ ] python main.py 能启动
 - [ ] 相关手动测试已完成
 
-## 需要组长注意
+## 需要项目组长注意
 - 
 ```
 
@@ -149,7 +149,7 @@ git checkout feature/A-database-login
 git merge main
 ```
 
-如果出现冲突，先不要乱删代码，找组长 F 一起处理。
+如果出现冲突，先不要乱删代码，找项目组长一起处理。
 
 ## 8. 文件归属建议
 
@@ -161,7 +161,8 @@ git merge main
 | `services/simulator.py` | C |
 | `services/*_service.py` | D、E |
 | `ui/` | E，相关模块成员配合 |
-| `README.md`、`GROUP_README.md`、`tests/` | F |
+| `README.md`、`GROUP_README.md` | 项目组长 |
+| `tests/`、历史查询相关代码、打包说明 | F |
 
 修改别人负责的核心文件前，先在群里说一声。
 
@@ -176,7 +177,7 @@ git merge main
 - `test_data/` 下生成的 CSV
 - `dist/` 和 `build/`
 
-如果误提交了运行生成文件，先联系组长 F 处理。
+如果误提交了运行生成文件，先联系项目组长处理。
 
 ## 10. 推荐协作流程
 
@@ -185,7 +186,7 @@ git merge main
 3. 小步提交：完成一个小功能就 commit。
 4. 推送分支：`git push`。
 5. 创建 PR：写清楚修改内容和测试结果。
-6. 组长 F 合并到 `main`。
+6. 项目组长合并到 `main`。
 7. 演示前：所有人只使用最新 `main` 测试。
 
 ## 11. 常用命令速查
@@ -201,7 +202,7 @@ git checkout main
 git checkout -b feature/A-database-login
 ```
 
-## 12. 组长 F 的合并检查清单
+## 12. 项目组长的合并检查清单
 
 - PR 是否只改了相关模块。
 - 是否有运行生成文件被提交。
