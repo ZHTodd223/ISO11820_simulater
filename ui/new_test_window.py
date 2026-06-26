@@ -72,5 +72,4 @@ class NewTestWindow(tk.Toplevel):
         except Exception as exc:
             messagebox.showerror("创建失败", str(exc))
 
-    # TODO[A]: 检查 productid + testid 重复时给出更清晰提示。
     # TODO[E]: 增加标准 60 分钟 / 自定义分钟选择。

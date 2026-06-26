@@ -5,6 +5,7 @@ from tkinter import messagebox
 
 from database.db_helper import DbHelper
 from ui.main_window import MainWindow
+from ui.operator_manage_window import OperatorManageWindow
 
 
 class LoginWindow(tk.Tk):
@@ -13,7 +14,7 @@ class LoginWindow(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("ISO 11820 登录")
-        self.geometry("360x230")
+        self.geometry("360x280")
         self.resizable(False, False)
         self.db = DbHelper()
         self.role_var = tk.StringVar(value="admin")
@@ -21,18 +22,27 @@ class LoginWindow(tk.Tk):
         self._build_ui()
 
     def _build_ui(self) -> None:
-        tk.Label(self, text="ISO 11820 建筑材料不燃性试验仿真系统", font=("Microsoft YaHei", 11, "bold")).pack(pady=18)
+        tk.Label(
+            self, text="ISO 11820 建筑材料不燃性试验仿真系统",
+            font=("Microsoft YaHei", 11, "bold"),
+        ).pack(pady=18)
+
         role_frame = tk.Frame(self)
         role_frame.pack(pady=8)
-        tk.Radiobutton(role_frame, text="管理员", variable=self.role_var, value="admin").pack(side=tk.LEFT, padx=12)
-        tk.Radiobutton(role_frame, text="试验员", variable=self.role_var, value="experimenter").pack(side=tk.LEFT, padx=12)
+        tk.Radiobutton(role_frame, text="管理员", variable=self.role_var, value="admin").pack(
+            side=tk.LEFT, padx=12
+        )
+        tk.Radiobutton(role_frame, text="试验员", variable=self.role_var, value="experimenter").pack(
+            side=tk.LEFT, padx=12
+        )
 
         pwd_frame = tk.Frame(self)
         pwd_frame.pack(pady=8)
         tk.Label(pwd_frame, text="密码：").pack(side=tk.LEFT)
         tk.Entry(pwd_frame, textvariable=self.password_var, show="*", width=18).pack(side=tk.LEFT)
 
-        tk.Button(self, text="登录", width=16, command=self._login).pack(pady=16)
+        tk.Button(self, text="登录", width=16, command=self._login).pack(pady=8)
+        tk.Button(self, text="账号管理", width=16, command=self._open_operator_manage).pack(pady=4)
 
     def _login(self) -> None:
         username = self.role_var.get()
@@ -44,4 +54,5 @@ class LoginWindow(tk.Tk):
         self.withdraw()
         MainWindow(master=self, user=user)
 
-    # TODO[A]: 允许管理员在数据库中维护操作员账号。
+    def _open_operator_manage(self) -> None:
+        OperatorManageWindow(self)
