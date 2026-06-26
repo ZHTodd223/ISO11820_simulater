@@ -8,6 +8,7 @@ from services.calibration_service import CalibrationService
 from services.test_controller import TestController
 from ui.calibration_window import CalibrationWindow
 from ui.new_test_window import NewTestWindow
+from ui.operator_manage_window import OperatorManageWindow
 from ui.test_record_window import TestRecordWindow
 
 try:
@@ -55,6 +56,11 @@ class MainWindow(tk.Toplevel):
         self.btn_stop_heat = tk.Button(top, text="停止升温", command=self.controller.stop_heating)
         for btn in [self.btn_new, self.btn_heat, self.btn_record, self.btn_stop_record, self.btn_test_record, self.btn_stop_heat]:
             btn.pack(side=tk.RIGHT, padx=4)
+
+        # 管理员专有按钮
+        if self.user.get("usertype") == "admin":
+            self.btn_manage = tk.Button(top, text="账号管理", command=self._open_operator_manage)
+            self.btn_manage.pack(side=tk.LEFT, padx=4)
 
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=12, pady=8)
@@ -260,6 +266,9 @@ class MainWindow(tk.Toplevel):
 
     def _on_close(self) -> None:
         self.master.destroy()
+
+    def _open_operator_manage(self) -> None:
+        OperatorManageWindow(self)
 
     # TODO[E]: 优化按钮、颜色、表格列宽和整体布局。
     # TODO[C]: 将曲线 X 轴改为真实秒数并滚动显示最近 10 分钟。

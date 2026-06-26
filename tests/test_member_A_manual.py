@@ -5,7 +5,8 @@ import sys
 import os
 
 # 确保项目根目录在 sys.path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, PROJECT_ROOT)
 
 PASS = "[PASS]"
 FAIL = "[FAIL]"
@@ -100,22 +101,26 @@ def test_db004():
     from database.db_helper import DbHelper
 
     db = DbHelper()
+
+    # 测试错误密码
     user = db.login("admin", "111111")
     if user is None:
         print(f"  {PASS} 密码错误返回 None (登录被拒绝)")
-        return True
+        wrong_pwd_ok = True
     else:
         print(f"  {FAIL} 错误密码居然登录成功 -> {user}")
-        return False
+        wrong_pwd_ok = False
 
-    # 也测 experimenter 登录
+    # 测试 experimenter 登录
     user2 = db.login("experimenter", "123456")
     if user2 and user2["usertype"] == "operator":
         print(f"  {PASS} 试验员登录成功 -> {user2}")
+        exp_ok = True
     else:
         print(f"  {FAIL} 试验员登录失败 -> {user2}")
-        return False
-    return True
+        exp_ok = False
+
+    return wrong_pwd_ok and exp_ok
 
 
 def test_db005():
