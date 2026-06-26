@@ -1,0 +1,22 @@
+{
+  "database": {
+    "sqlite_path": "data/ISO11820.db"
+  },
+  "simulation": {
+    "initial_furnace_temp": 25.0,
+    "target_furnace_temp": 750.0,
+    "heating_rate_per_second": 40.0,
+    "temp_fluctuation": 0.5,
+    "stable_threshold": 3.0,
+    "tick_ms": 800
+  },
+  "file_storage": {
+    "test_data_dir": "test_data",
+    "report_dir": "reports"
+  },
+  "apparatus": {
+    "apparatus_id": "FURNACE-01",
+    "apparatus_name": "一号试验炉",
+    "const_power": 2048
+  }
+}
