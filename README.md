@@ -118,7 +118,11 @@ ISO11820_Python/
 4. `test_report_manual.md`
 5. `final_acceptance_test.md`
 
-## 8. 打包方式
+## 8. Git 协作规范
+
+小组开发请先阅读 `GIT_GUIDE.md`。建议每个人使用自己的功能分支开发，提交信息按 `feat(A): add login query` 这种格式书写，由组长 F 统一检查 Pull Request 并合并到 `main`。
+
+## 9. 打包方式
 
 ```bash
 pyinstaller --noconsole --onefile --name ISO11820_Python main.py
@@ -126,7 +130,7 @@ pyinstaller --noconsole --onefile --name ISO11820_Python main.py
 
 打包后程序在 `dist/ISO11820_Python.exe`。
 
-## 9. 后续开发约定
+## 10. 后续开发约定
 
 - 数据库操作集中在 `database/db_helper.py`。
 - 状态机集中在 `services/test_controller.py`。
