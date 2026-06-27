@@ -7,8 +7,9 @@ from typing import Optional
 
 from models.calibration_record import CalibrationRecord
 from models.test_record import TestRecord
+from utils.path_utils import app_base_dir
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = app_base_dir()
 DB_PATH = BASE_DIR / "data" / "ISO11820.db"
 
 

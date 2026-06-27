@@ -2,12 +2,12 @@
 
 import json
 import random
-from pathlib import Path
 
 from models.sensor_data import SensorData, SensorHistory
+from utils.path_utils import app_base_dir
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = app_base_dir()
 CONFIG_PATH = BASE_DIR / "config.json"
 
 # 默认仿真参数（config.json 缺失或字段缺失时回退使用）

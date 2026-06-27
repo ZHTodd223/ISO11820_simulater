@@ -2,10 +2,10 @@
 
 import os
 import sqlite3
-from pathlib import Path
 
+from utils.path_utils import app_base_dir
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = app_base_dir()
 DB_PATH = BASE_DIR / "data" / "ISO11820.db"
 
 
