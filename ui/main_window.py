@@ -224,6 +224,9 @@ class MainWindow(tk.Toplevel):
         self.btn_stop_heat.config(state=tk.NORMAL if state in ("Preparing", "Ready", "Complete") else tk.DISABLED)
 
     def open_new_test(self) -> None:
+        if self.controller.needs_save:
+            messagebox.showwarning("提示", "上一试验尚未保存记录，\n请先点击「试验记录」完成保存。")
+            return
         NewTestWindow(self, self.controller, self.user["username"])
 
     def open_test_record(self) -> None:
@@ -236,11 +239,12 @@ class MainWindow(tk.Toplevel):
         CalibrationWindow(self, self.user["username"], lambda: self.latest_data.tcal if self.latest_data else 25.0, self.refresh_calibrations)
 
     def _after_record_saved(self) -> None:
+        """试验保存后：刷新历史、清空缓存、保温待命。"""
         self.refresh_history()
-        self.controller.current_test = None
         self.controller.record_samples.clear()
         self.controller.record_seconds = 0
-        self.controller.stop_heating()
+        self.controller.mark_saved()          # needs_save=False, Complete→Preparing（保温）
+        self.controller.current_test = None   # 清空，准备下一次试验
 
     def refresh_history(self) -> None:
         for item in self.history_tree.get_children():

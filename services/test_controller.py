@@ -28,17 +28,27 @@ class TestController:
         self.on_message: Optional[Callable[[str], None]] = None
         self.on_state_changed: Optional[Callable[[str], None]] = None
 
+        # 未保存试验保护：Recording 完成后置 True，保存后置 False
+        self.needs_save: bool = False
+
     def set_current_test(self, record: TestRecord) -> None:
         """设置当前试验。"""
+        if self.needs_save:
+            self._message("⚠ 上一试验尚未保存，新建试验将丢弃未保存的数据")
         self.current_test = record
         self.record_seconds = 0
         self.record_samples.clear()
+        self.needs_save = False
         self._message(f"已创建试验：{record.productid} / {record.testid}")
 
     def start_heating(self) -> None:
         """Idle -> Preparing。"""
         if self.state != "Idle":
             return
+        if self.needs_save:
+            self._message("⚠ 上一试验尚未保存，请先保存试验记录")
+            return
+        self.simulator.reset()
         self._set_state("Preparing")
         self._message("开始升温，系统升温中")
 
@@ -54,16 +64,28 @@ class TestController:
         return True
 
     def stop_recording(self) -> None:
-        """Recording -> Complete。"""
+        """Recording -> Complete（手动停止）。"""
         if self.state == "Recording":
             self._set_state("Complete")
+            self.needs_save = True
             self._message("用户手动停止记录")
 
     def stop_heating(self) -> None:
-        """停止升温并回到空闲。"""
+        """停止升温并回到空闲（炉温开始下降）。"""
         if self.state in ("Preparing", "Ready", "Complete"):
             self._set_state("Idle")
             self._message("停止升温，炉温开始下降")
+
+    def mark_saved(self) -> None:
+        """标记当前试验已保存。
+
+        Complete → Preparing（保温），炉子保持高温，
+        用户新建下一次试验后可直接等待 Ready，省去升温时间。
+        """
+        self.needs_save = False
+        self._message("试验记录已保存，系统保持恒温状态")
+        if self.state == "Complete":
+            self._set_state("Preparing")
 
     def tick(self) -> SensorData:
         """主界面定时调用，驱动仿真和状态检查。"""
@@ -127,5 +149,5 @@ class TestController:
         if self.on_message:
             self.on_message(msg)
 
-    # TODO[B]: 增加标准 60 分钟、固定时长和未保存试验保护。
+    # TODO[B]: 增加标准 60 分钟、固定时长。
     # TODO[B]: 将按钮可用状态整理为独立方法，供主界面直接绑定。
