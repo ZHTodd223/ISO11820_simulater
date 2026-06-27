@@ -43,6 +43,14 @@ COLOR = {
 class MainWindow(tk.Toplevel):
     """系统主界面。"""
 
+    # 异常测试下拉项 -> 仿真异常模式
+    _ANOMALY_MAP = {
+        "正常": "none",
+        "温度尖峰": "spike",
+        "传感器失效": "sensor_failure",
+        "超温": "overheat",
+    }
+
     def __init__(self, master: tk.Tk, user: dict) -> None:
         super().__init__(master)
         self.user = user
@@ -52,7 +60,9 @@ class MainWindow(tk.Toplevel):
         self.controller.on_state_changed = lambda _state: self.update_buttons()
         self.calibration_service = CalibrationService()
         self.latest_data = None
-        self.chart_points: list[tuple[int, float, float, float, float]] = []
+        # (elapsed_seconds, tf1, tf2, ts, tc)
+        self.chart_points: list[tuple[float, float, float, float, float]] = []
+        self._chart_elapsed = 0.0
 
         self.title(f"ISO 11820 仿真系统 - {user['username']}")
         self.geometry("1160x760")
@@ -159,6 +169,25 @@ class MainWindow(tk.Toplevel):
             dot.pack(side=tk.LEFT, padx=(0, 4))
             tk.Label(frame, textvariable=var, font=("Consolas", 15), width=18,
                      anchor="w", fg=COLOR["text_dark"], bg=COLOR["bg"]).pack(side=tk.LEFT)
+
+        # 最近 10 分钟温漂显示
+        self.drift_var = tk.StringVar(value="最近10分钟温漂：0.00 ℃/min")
+        tk.Label(left, textvariable=self.drift_var, font=("Consolas", 11), width=18, anchor="w").pack(pady=8)
+
+        # 温度异常测试入口
+        anomaly_frame = tk.Frame(left)
+        anomaly_frame.pack(fill=tk.X, pady=8)
+        tk.Label(anomaly_frame, text="异常测试：").pack(side=tk.LEFT)
+        self.anomaly_var = tk.StringVar(value="正常")
+        self.anomaly_combo = ttk.Combobox(
+            anomaly_frame,
+            textvariable=self.anomaly_var,
+            values=list(self._ANOMALY_MAP.keys()),
+            state="readonly",
+            width=12,
+        )
+        self.anomaly_combo.pack(side=tk.LEFT)
+        self.anomaly_combo.bind("<<ComboboxSelected>>", self._on_anomaly_changed)
 
         # ── 中间曲线区域 ──
         chart_frame = tk.Frame(self.tab_run, bg="white", relief=tk.GROOVE, bd=1)
@@ -342,8 +371,17 @@ class MainWindow(tk.Toplevel):
         self.temp_vars["校准温"].set(f"校准温: {d.tcal:.1f} ℃")
         self.state_var.set(f"当前状态：{self.controller.STATES[self.controller.state]}")
         self.timer_var.set(f"记录时间：{self.controller.record_seconds} s")
-        self.chart_points.append((len(self.chart_points), d.tf1, d.tf2, d.ts, d.tc))
-        self.chart_points = self.chart_points[-600:]
+        self._chart_elapsed += self.controller.simulator.tick_seconds
+        self.chart_points.append((self._chart_elapsed, d.tf1, d.tf2, d.ts, d.tc))
+        # 滚动保留最近 10 分钟数据
+        self.chart_points = [p for p in self.chart_points if p[0] >= self._chart_elapsed - 600]
+        self.drift_var.set(f"最近10分钟温漂：{self.controller.simulator.calc_drift():.2f} ℃/min")
+        # 模型层异常检测：读数越界时提示
+        if d.is_anomalous() and not getattr(self, "_anomaly_alerted", False):
+            self.add_message("警告：检测到异常温度读数，请检查传感器/设备")
+            self._anomaly_alerted = True
+        elif not d.is_anomalous():
+            self._anomaly_alerted = False
         self._redraw_chart()
         self.update_buttons()
         self.after(800, self._tick)
@@ -352,6 +390,7 @@ class MainWindow(tk.Toplevel):
         if not self.ax or not self.canvas:
             return
         self.ax.clear()
+        self.ax.set_facecolor("#FAFAFA")
         self.ax.set_ylim(0, 800)
         self.ax.set_title("实时温度曲线", fontsize=12, fontweight="bold", color=COLOR["text_dark"])
         self.ax.set_xlabel("时间 (s)", fontsize=9)
@@ -364,6 +403,9 @@ class MainWindow(tk.Toplevel):
             self.ax.plot(xs, [p[3] for p in self.chart_points], label="TS")
             self.ax.plot(xs, [p[4] for p in self.chart_points], label="TC")
             self.ax.legend(loc="upper left")
+            # X 轴滚动显示最近 10 分钟
+            x_max = xs[-1]
+            self.ax.set_xlim(max(0.0, x_max - 600), x_max)
         self.canvas.draw_idle()
 
     def update_buttons(self) -> None:
@@ -447,6 +489,13 @@ class MainWindow(tk.Toplevel):
         self.log_text.insert(tk.END, message + "\n")
         self.log_text.see(tk.END)
 
+    def _on_anomaly_changed(self, _event=None) -> None:
+        """切换温度异常测试模式。"""
+        label = self.anomaly_var.get()
+        mode = self._ANOMALY_MAP.get(label, "none")
+        self.controller.simulator.set_anomaly_mode(mode)
+        self.add_message(f"异常测试模式：{label}")
+
     def _on_close(self) -> None:
         if self.controller.state == "Recording":
             if not messagebox.askyesno("确认退出", "当前正在记录试验数据，退出将丢失未保存的记录。\n确定要退出吗？"):
@@ -456,4 +505,4 @@ class MainWindow(tk.Toplevel):
     def _open_operator_manage(self) -> None:
         OperatorManageWindow(self)
 
-    # TODO[C]: 将曲线 X 轴改为真实秒数并滚动显示最近 10 分钟。
+    # TODO[E]: 优化按钮、颜色、表格列宽和整体布局。
