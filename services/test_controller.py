@@ -210,6 +210,36 @@ class TestController:
             "memo": memo,
         }
 
+    # ── 按钮状态查询 ──────────────────────────────────────────────────
+
+    def get_button_states(self) -> dict[str, bool]:
+        """返回各按钮在当前状态下是否可用。
+
+        供主界面 update_buttons() 直接调用。
+        按钮逻辑集中在控制器中，避免 UI 层直接判断状态。
+        """
+        state = self.state
+        has_test = self.current_test is not None
+
+        return {
+            "new_test": (
+                # Idle/Complete：没有未保存记录时允许新建
+                state in ("Idle", "Complete") and not self.needs_save
+            ) or (
+                # Preparing：仅保温待命（无活动试验）时允许新建
+                state == "Preparing"
+                and not self.needs_save
+                and not has_test
+            ),
+            "start_heating": state == "Idle"
+            and has_test
+            and not self.needs_save,
+            "stop_heating": state in ("Preparing", "Ready", "Complete"),
+            "start_recording": state == "Ready" and has_test,
+            "stop_recording": state == "Recording",
+            "test_record": state == "Complete" and has_test,
+        }
+
     # ── 内部方法 ──────────────────────────────────────────────────────
 
     def _check_early_termination(self) -> None:
@@ -249,5 +279,3 @@ class TestController:
         msg = f"{datetime.now().strftime('%H:%M:%S')}  {text}"
         if self.on_message:
             self.on_message(msg)
-
-    # TODO[B]: 将按钮可用状态整理为独立方法，供主界面直接绑定。

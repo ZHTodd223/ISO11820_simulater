@@ -215,13 +215,14 @@ class MainWindow(tk.Toplevel):
         self.canvas.draw_idle()
 
     def update_buttons(self) -> None:
-        state = self.controller.state
-        self.btn_new.config(state=tk.NORMAL if state in ("Idle", "Complete") else tk.DISABLED)
-        self.btn_heat.config(state=tk.NORMAL if state == "Idle" else tk.DISABLED)
-        self.btn_record.config(state=tk.NORMAL if state == "Ready" else tk.DISABLED)
-        self.btn_stop_record.config(state=tk.NORMAL if state == "Recording" else tk.DISABLED)
-        self.btn_test_record.config(state=tk.NORMAL if state == "Complete" else tk.DISABLED)
-        self.btn_stop_heat.config(state=tk.NORMAL if state in ("Preparing", "Ready", "Complete") else tk.DISABLED)
+        """根据控制器返回的按钮状态字典统一设置按钮可用性。"""
+        states = self.controller.get_button_states()
+        self.btn_new.config(state=tk.NORMAL if states["new_test"] else tk.DISABLED)
+        self.btn_heat.config(state=tk.NORMAL if states["start_heating"] else tk.DISABLED)
+        self.btn_record.config(state=tk.NORMAL if states["start_recording"] else tk.DISABLED)
+        self.btn_stop_record.config(state=tk.NORMAL if states["stop_recording"] else tk.DISABLED)
+        self.btn_test_record.config(state=tk.NORMAL if states["test_record"] else tk.DISABLED)
+        self.btn_stop_heat.config(state=tk.NORMAL if states["stop_heating"] else tk.DISABLED)
 
     def open_new_test(self) -> None:
         if self.controller.needs_save:
