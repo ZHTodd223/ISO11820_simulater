@@ -14,6 +14,7 @@ def export_pdf_report(record: TestRecord, samples: list[SensorData], result: dic
 
     try:
         from reportlab.lib.pagesizes import A4
+        from reportlab.lib.utils import ImageReader
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
         from reportlab.pdfgen import canvas
@@ -67,9 +68,9 @@ def export_pdf_report(record: TestRecord, samples: list[SensorData], result: dic
             ax.plot(xs, [s.ts for s in samples], label="TS")
             ax.plot(xs, [s.tc for s in samples], label="TC")
             ax.legend(loc="upper left")
-        ax.set_title("温度曲线")
-        ax.set_xlabel("时间(s)")
-        ax.set_ylabel("温度(℃)")
+        ax.set_title("Temperature Curve")
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Temperature (℃)")
         ax.set_ylim(0, 800)
         fig.tight_layout()
 
@@ -79,7 +80,8 @@ def export_pdf_report(record: TestRecord, samples: list[SensorData], result: dic
         buf.seek(0)
 
         img_y = y - 220
-        c.drawImage(buf, 72, img_y, width=width - 144, height=200, preserveAspectRatio=True)
+        image = ImageReader(buf)
+        c.drawImage(image, 72, img_y, width=width - 144, height=200, preserveAspectRatio=True)
     except ImportError:
         c.drawString(72, y - 40, "（未安装 Matplotlib，曲线图略）")
 
