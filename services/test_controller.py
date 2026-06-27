@@ -247,8 +247,13 @@ class TestController:
 
         在 30/35/40/45/50/55 分钟时各检查一次。
         条件：最近 10 分钟炉温漂移 < 2°C/10min（约 0.2°C/min）。
-        调用成员 C 实现的 calc_drift() 获取温漂值。
+        使用 hasattr 安全调用 calc_drift()，避免 C 模块未合并时崩溃。
         """
+        if not hasattr(self.simulator, "calc_drift"):
+            self._message("温漂计算接口暂不可用，跳过提前终止检查")
+            self._checked_seconds.update(self.EARLY_CHECK_SECONDS)
+            return
+
         for early_sec in self.EARLY_CHECK_SECONDS:
             if self.record_seconds != early_sec:
                 continue
