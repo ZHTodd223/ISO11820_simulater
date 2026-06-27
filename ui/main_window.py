@@ -8,6 +8,7 @@ from services.calibration_service import CalibrationService
 from services.test_controller import TestController
 from ui.calibration_window import CalibrationWindow
 from ui.new_test_window import NewTestWindow
+from ui.operator_manage_window import OperatorManageWindow
 from ui.test_record_window import TestRecordWindow
 
 try:
@@ -21,14 +22,6 @@ except ImportError:
 class MainWindow(tk.Toplevel):
     """系统主界面。"""
 
-    # 异常测试下拉项 -> 仿真异常模式
-    _ANOMALY_MAP = {
-        "正常": "none",
-        "温度尖峰": "spike",
-        "传感器失效": "sensor_failure",
-        "超温": "overheat",
-    }
-
     def __init__(self, master: tk.Tk, user: dict) -> None:
         super().__init__(master)
         self.user = user
@@ -38,9 +31,7 @@ class MainWindow(tk.Toplevel):
         self.controller.on_state_changed = lambda _state: self.update_buttons()
         self.calibration_service = CalibrationService()
         self.latest_data = None
-        # (elapsed_seconds, tf1, tf2, ts, tc)
-        self.chart_points: list[tuple[float, float, float, float, float]] = []
-        self._chart_elapsed = 0.0
+        self.chart_points: list[tuple[int, float, float, float, float]] = []
 
         self.title(f"ISO 11820 仿真系统 - {user['username']}")
         self.geometry("1120x720")
@@ -66,6 +57,11 @@ class MainWindow(tk.Toplevel):
         for btn in [self.btn_new, self.btn_heat, self.btn_record, self.btn_stop_record, self.btn_test_record, self.btn_stop_heat]:
             btn.pack(side=tk.RIGHT, padx=4)
 
+        # 管理员专有按钮
+        if self.user.get("usertype") == "admin":
+            self.btn_manage = tk.Button(top, text="账号管理", command=self._open_operator_manage)
+            self.btn_manage.pack(side=tk.LEFT, padx=4)
+
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=12, pady=8)
         self.tab_run = tk.Frame(self.notebook)
@@ -88,25 +84,6 @@ class MainWindow(tk.Toplevel):
             var = tk.StringVar(value=f"{name}: 25.0 ℃")
             self.temp_vars[name] = var
             tk.Label(left, textvariable=var, font=("Consolas", 16), width=18, anchor="w").pack(pady=8)
-
-        # 最近 10 分钟温漂显示
-        self.drift_var = tk.StringVar(value="最近10分钟温漂：0.00 ℃/min")
-        tk.Label(left, textvariable=self.drift_var, font=("Consolas", 11), width=18, anchor="w").pack(pady=8)
-
-        # 温度异常测试入口
-        anomaly_frame = tk.Frame(left)
-        anomaly_frame.pack(fill=tk.X, pady=8)
-        tk.Label(anomaly_frame, text="异常测试：").pack(side=tk.LEFT)
-        self.anomaly_var = tk.StringVar(value="正常")
-        self.anomaly_combo = ttk.Combobox(
-            anomaly_frame,
-            textvariable=self.anomaly_var,
-            values=list(self._ANOMALY_MAP.keys()),
-            state="readonly",
-            width=12,
-        )
-        self.anomaly_combo.pack(side=tk.LEFT)
-        self.anomaly_combo.bind("<<ComboboxSelected>>", self._on_anomaly_changed)
 
         chart_frame = tk.Frame(self.tab_run)
         chart_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8, pady=8)
@@ -132,17 +109,69 @@ class MainWindow(tk.Toplevel):
     def _build_history_tab(self) -> None:
         search_frame = tk.Frame(self.tab_history)
         search_frame.pack(fill=tk.X, padx=8, pady=8)
-        self.keyword_var = tk.StringVar()
-        tk.Label(search_frame, text="样品/试验编号：").pack(side=tk.LEFT)
-        tk.Entry(search_frame, textvariable=self.keyword_var, width=24).pack(side=tk.LEFT)
-        tk.Button(search_frame, text="查询", command=self.refresh_history).pack(side=tk.LEFT, padx=8)
 
-        columns = ("productid", "testid", "testdate", "operator", "totaltesttime", "lostweight_per", "deltatf", "flag")
+        # Row 1: 关键字 + 操作员
+        row1 = tk.Frame(search_frame)
+        row1.pack(fill=tk.X, pady=3)
+        tk.Label(row1, text="样品/试验编号：", width=14, anchor="e").pack(side=tk.LEFT)
+        self.keyword_var = tk.StringVar()
+        tk.Entry(row1, textvariable=self.keyword_var, width=18).pack(side=tk.LEFT)
+
+        tk.Label(row1, text="操作员：", width=8, anchor="e").pack(side=tk.LEFT, padx=(12, 0))
+        self.history_operator_var = tk.StringVar(value="")
+        self.history_operator_combo = ttk.Combobox(
+            row1, textvariable=self.history_operator_var, width=14, state="readonly"
+        )
+        self.history_operator_combo.pack(side=tk.LEFT, padx=4)
+
+        # Row 2: 日期范围 + 按钮
+        row2 = tk.Frame(search_frame)
+        row2.pack(fill=tk.X, pady=3)
+        tk.Label(row2, text="开始日期：", width=14, anchor="e").pack(side=tk.LEFT)
+        self.date_from_var = tk.StringVar()
+        tk.Entry(row2, textvariable=self.date_from_var, width=18).pack(side=tk.LEFT)
+
+        tk.Label(row2, text="结束日期：", width=8, anchor="e").pack(side=tk.LEFT, padx=(12, 0))
+        self.date_to_var = tk.StringVar()
+        tk.Entry(row2, textvariable=self.date_to_var, width=18).pack(side=tk.LEFT)
+
+        tk.Button(row2, text="查询", command=self.refresh_history, width=8).pack(side=tk.LEFT, padx=(16, 4))
+        tk.Button(row2, text="重置", command=self._reset_history_filters, width=8).pack(side=tk.LEFT, padx=4)
+
+        # TreeView
+        columns = (
+            "productid", "testid", "testdate", "operator",
+            "totaltesttime", "lostweight_per", "deltatf", "flag",
+        )
         self.history_tree = ttk.Treeview(self.tab_history, columns=columns, show="headings")
+        col_labels = {
+            "productid": "样品编号", "testid": "试验编号", "testdate": "试验日期",
+            "operator": "操作员", "totaltesttime": "试验总时长",
+            "lostweight_per": "失重率", "deltatf": "ΔTF", "flag": "状态",
+        }
         for col in columns:
-            self.history_tree.heading(col, text=col)
-            self.history_tree.column(col, width=120)
+            self.history_tree.heading(col, text=col_labels.get(col, col))
+            self.history_tree.column(col, width=115)
         self.history_tree.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
+
+        self._load_operator_list()
+        self.refresh_history()
+
+    def _load_operator_list(self) -> None:
+        """加载操作员下拉列表。"""
+        try:
+            ops = self.db.query_operators()
+            values = [""] + [op["username"] for op in ops]
+            self.history_operator_combo["values"] = values
+        except Exception:
+            self.history_operator_combo["values"] = [""]
+
+    def _reset_history_filters(self) -> None:
+        """重置历史查询筛选条件并刷新。"""
+        self.keyword_var.set("")
+        self.date_from_var.set("")
+        self.date_to_var.set("")
+        self.history_operator_var.set("")
         self.refresh_history()
 
     def _build_calibration_tab(self) -> None:
@@ -162,17 +191,8 @@ class MainWindow(tk.Toplevel):
         self.temp_vars["校准温"].set(f"校准温: {d.tcal:.1f} ℃")
         self.state_var.set(f"当前状态：{self.controller.STATES[self.controller.state]}")
         self.timer_var.set(f"记录时间：{self.controller.record_seconds} s")
-        self._chart_elapsed += self.controller.simulator.tick_seconds
-        self.chart_points.append((self._chart_elapsed, d.tf1, d.tf2, d.ts, d.tc))
-        # 滚动保留最近 10 分钟数据
-        self.chart_points = [p for p in self.chart_points if p[0] >= self._chart_elapsed - 600]
-        self.drift_var.set(f"最近10分钟温漂：{self.controller.simulator.calc_drift():.2f} ℃/min")
-        # 模型层异常检测：读数越界时提示
-        if d.is_anomalous() and not getattr(self, "_anomaly_alerted", False):
-            self.add_message("警告：检测到异常温度读数，请检查传感器/设备")
-            self._anomaly_alerted = True
-        elif not d.is_anomalous():
-            self._anomaly_alerted = False
+        self.chart_points.append((len(self.chart_points), d.tf1, d.tf2, d.ts, d.tc))
+        self.chart_points = self.chart_points[-600:]
         self._redraw_chart()
         self.update_buttons()
         self.after(800, self._tick)
@@ -192,9 +212,6 @@ class MainWindow(tk.Toplevel):
             self.ax.plot(xs, [p[3] for p in self.chart_points], label="TS")
             self.ax.plot(xs, [p[4] for p in self.chart_points], label="TC")
             self.ax.legend(loc="upper left")
-            # X 轴滚动显示最近 10 分钟
-            x_max = xs[-1]
-            self.ax.set_xlim(max(0.0, x_max - 600), x_max)
         self.canvas.draw_idle()
 
     def update_buttons(self) -> None:
@@ -228,7 +245,12 @@ class MainWindow(tk.Toplevel):
     def refresh_history(self) -> None:
         for item in self.history_tree.get_children():
             self.history_tree.delete(item)
-        for row in self.db.query_tests(self.keyword_var.get() if hasattr(self, "keyword_var") else ""):
+        for row in self.db.query_tests(
+            keyword=self.keyword_var.get() if hasattr(self, "keyword_var") else "",
+            date_from=self.date_from_var.get() if hasattr(self, "date_from_var") else "",
+            date_to=self.date_to_var.get() if hasattr(self, "date_to_var") else "",
+            operator=self.history_operator_var.get() if hasattr(self, "history_operator_var") else "",
+        ):
             self.history_tree.insert("", tk.END, values=tuple(row.values()))
 
     def refresh_calibrations(self) -> None:
@@ -242,14 +264,11 @@ class MainWindow(tk.Toplevel):
         self.log_text.insert(tk.END, message + "\n")
         self.log_text.see(tk.END)
 
-    def _on_anomaly_changed(self, _event=None) -> None:
-        """切换温度异常测试模式。"""
-        label = self.anomaly_var.get()
-        mode = self._ANOMALY_MAP.get(label, "none")
-        self.controller.simulator.set_anomaly_mode(mode)
-        self.add_message(f"异常测试模式：{label}")
-
     def _on_close(self) -> None:
         self.master.destroy()
 
+    def _open_operator_manage(self) -> None:
+        OperatorManageWindow(self)
+
     # TODO[E]: 优化按钮、颜色、表格列宽和整体布局。
+    # TODO[C]: 将曲线 X 轴改为真实秒数并滚动显示最近 10 分钟。
