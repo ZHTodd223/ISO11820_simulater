@@ -151,3 +151,46 @@ python tests\test_member_A_manual.py
 - 升温后能进入 Ready。
 - 异常模式 `sensor_failure` 能让 `SensorData.is_anomalous()` 返回 `True`。
 - 主窗口仍保留账号管理、历史筛选、B 的按钮状态逻辑。
+
+## 2026-06-27 复审补充
+
+复审分支：`origin/feat/member-C-simulator`
+
+新增修复提交：
+
+```text
+b2d74e9 fix(C): 按 review 修复 main_window 回退 A/B 功能问题
+```
+
+复审结论：仍暂不合并。
+
+原因：当前 `main` 已合并成员 E 的界面与校准模块，C 分支再次合并时会在 `ui/main_window.py` 产生内容冲突。
+
+复现命令：
+
+```bash
+git switch main
+git switch -c review/C-merge-test
+git merge --no-commit --no-ff origin/feat/member-C-simulator
+```
+
+实际结果：
+
+```text
+CONFLICT (content): Merge conflict in ui/main_window.py
+Automatic merge failed; fix conflicts and then commit the result.
+```
+
+本次复审确认：C 分支已经保留了 A 的账号管理、历史查询筛选和 B 的按钮状态接口，但还没有基于最新 `main` 处理 E 合并后的 `main_window.py` 冲突。
+
+下一步修复要求：
+
+- 从最新 `main` 合并到 C 分支。
+- 手动解决 `ui/main_window.py` 冲突。
+- 同时保留：
+  - A：账号管理入口、历史查询日期/操作员筛选。
+  - B：`get_button_states()`、`needs_save`、`mark_saved()`。
+  - E：界面美化、校准历史入口、新建试验时长模式。
+  - C：温漂显示、异常测试、曲线滚动、`calc_drift()`。
+
+解决冲突后再次提交修复，再申请复审。
