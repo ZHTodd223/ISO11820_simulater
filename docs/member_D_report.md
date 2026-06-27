@@ -43,7 +43,7 @@ CSV、Excel、PDF 文件能生成，数据库结果能更新。
 
 ## TODO 清单
 
-- TODO[D]: PDF 中嵌入温度曲线图片。
-- TODO[D]: Excel 样式美化。
-- TODO[D]: 增加判定结论。
-- TODO[D]: 增加导出失败提示。
+- [x] TODO[D]: PDF 中嵌入温度曲线图片。
+- [x] TODO[D]: Excel 样式美化。
+- [x] TODO[D]: 增加判定结论。
+- [x] TODO[D]: 增加导出失败提示。
