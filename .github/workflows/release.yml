@@ -28,7 +28,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: 初始化默认数据库
-        run: python database/init_db.py
+        run: python -m database.init_db
 
       - name: 使用 PyInstaller 打包
         run: pyinstaller --noconsole --onefile --clean --name ISO11820_Python main.py
