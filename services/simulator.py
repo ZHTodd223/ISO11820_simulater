@@ -101,6 +101,9 @@ class SensorSimulator:
         elif state == "Ready":
             self.data.tf1 = self.target_temp + noise1
             self.data.tf2 = self.target_temp + noise2
+            # 同步表面温/中心温，避免异常模式残留旧值（与 Preparing 末态一致）
+            self.data.ts = self.data.tf1 * 0.30 + self._noise()
+            self.data.tc = self.data.tf1 * 0.25 + self._noise()
             self.stable_count += 1
 
         elif state == "Recording":

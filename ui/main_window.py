@@ -8,6 +8,7 @@ from services.calibration_service import CalibrationService
 from services.test_controller import TestController
 from ui.calibration_window import CalibrationWindow
 from ui.new_test_window import NewTestWindow
+from ui.operator_manage_window import OperatorManageWindow
 from ui.test_record_window import TestRecordWindow
 
 try:
@@ -65,6 +66,11 @@ class MainWindow(tk.Toplevel):
         self.btn_stop_heat = tk.Button(top, text="停止升温", command=self.controller.stop_heating)
         for btn in [self.btn_new, self.btn_heat, self.btn_record, self.btn_stop_record, self.btn_test_record, self.btn_stop_heat]:
             btn.pack(side=tk.RIGHT, padx=4)
+
+        # 管理员专有按钮
+        if self.user.get("usertype") == "admin":
+            self.btn_manage = tk.Button(top, text="账号管理", command=self._open_operator_manage)
+            self.btn_manage.pack(side=tk.LEFT, padx=4)
 
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=12, pady=8)
@@ -132,17 +138,69 @@ class MainWindow(tk.Toplevel):
     def _build_history_tab(self) -> None:
         search_frame = tk.Frame(self.tab_history)
         search_frame.pack(fill=tk.X, padx=8, pady=8)
-        self.keyword_var = tk.StringVar()
-        tk.Label(search_frame, text="样品/试验编号：").pack(side=tk.LEFT)
-        tk.Entry(search_frame, textvariable=self.keyword_var, width=24).pack(side=tk.LEFT)
-        tk.Button(search_frame, text="查询", command=self.refresh_history).pack(side=tk.LEFT, padx=8)
 
-        columns = ("productid", "testid", "testdate", "operator", "totaltesttime", "lostweight_per", "deltatf", "flag")
+        # Row 1: 关键字 + 操作员
+        row1 = tk.Frame(search_frame)
+        row1.pack(fill=tk.X, pady=3)
+        tk.Label(row1, text="样品/试验编号：", width=14, anchor="e").pack(side=tk.LEFT)
+        self.keyword_var = tk.StringVar()
+        tk.Entry(row1, textvariable=self.keyword_var, width=18).pack(side=tk.LEFT)
+
+        tk.Label(row1, text="操作员：", width=8, anchor="e").pack(side=tk.LEFT, padx=(12, 0))
+        self.history_operator_var = tk.StringVar(value="")
+        self.history_operator_combo = ttk.Combobox(
+            row1, textvariable=self.history_operator_var, width=14, state="readonly"
+        )
+        self.history_operator_combo.pack(side=tk.LEFT, padx=4)
+
+        # Row 2: 日期范围 + 按钮
+        row2 = tk.Frame(search_frame)
+        row2.pack(fill=tk.X, pady=3)
+        tk.Label(row2, text="开始日期：", width=14, anchor="e").pack(side=tk.LEFT)
+        self.date_from_var = tk.StringVar()
+        tk.Entry(row2, textvariable=self.date_from_var, width=18).pack(side=tk.LEFT)
+
+        tk.Label(row2, text="结束日期：", width=8, anchor="e").pack(side=tk.LEFT, padx=(12, 0))
+        self.date_to_var = tk.StringVar()
+        tk.Entry(row2, textvariable=self.date_to_var, width=18).pack(side=tk.LEFT)
+
+        tk.Button(row2, text="查询", command=self.refresh_history, width=8).pack(side=tk.LEFT, padx=(16, 4))
+        tk.Button(row2, text="重置", command=self._reset_history_filters, width=8).pack(side=tk.LEFT, padx=4)
+
+        # TreeView
+        columns = (
+            "productid", "testid", "testdate", "operator",
+            "totaltesttime", "lostweight_per", "deltatf", "flag",
+        )
         self.history_tree = ttk.Treeview(self.tab_history, columns=columns, show="headings")
+        col_labels = {
+            "productid": "样品编号", "testid": "试验编号", "testdate": "试验日期",
+            "operator": "操作员", "totaltesttime": "试验总时长",
+            "lostweight_per": "失重率", "deltatf": "ΔTF", "flag": "状态",
+        }
         for col in columns:
-            self.history_tree.heading(col, text=col)
-            self.history_tree.column(col, width=120)
+            self.history_tree.heading(col, text=col_labels.get(col, col))
+            self.history_tree.column(col, width=115)
         self.history_tree.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
+
+        self._load_operator_list()
+        self.refresh_history()
+
+    def _load_operator_list(self) -> None:
+        """加载操作员下拉列表。"""
+        try:
+            ops = self.db.query_operators()
+            values = [""] + [op["username"] for op in ops]
+            self.history_operator_combo["values"] = values
+        except Exception:
+            self.history_operator_combo["values"] = [""]
+
+    def _reset_history_filters(self) -> None:
+        """重置历史查询筛选条件并刷新。"""
+        self.keyword_var.set("")
+        self.date_from_var.set("")
+        self.date_to_var.set("")
+        self.history_operator_var.set("")
         self.refresh_history()
 
     def _build_calibration_tab(self) -> None:
@@ -198,15 +256,19 @@ class MainWindow(tk.Toplevel):
         self.canvas.draw_idle()
 
     def update_buttons(self) -> None:
-        state = self.controller.state
-        self.btn_new.config(state=tk.NORMAL if state in ("Idle", "Complete") else tk.DISABLED)
-        self.btn_heat.config(state=tk.NORMAL if state == "Idle" else tk.DISABLED)
-        self.btn_record.config(state=tk.NORMAL if state == "Ready" else tk.DISABLED)
-        self.btn_stop_record.config(state=tk.NORMAL if state == "Recording" else tk.DISABLED)
-        self.btn_test_record.config(state=tk.NORMAL if state == "Complete" else tk.DISABLED)
-        self.btn_stop_heat.config(state=tk.NORMAL if state in ("Preparing", "Ready", "Complete") else tk.DISABLED)
+        """根据控制器返回的按钮状态字典统一设置按钮可用性。"""
+        states = self.controller.get_button_states()
+        self.btn_new.config(state=tk.NORMAL if states["new_test"] else tk.DISABLED)
+        self.btn_heat.config(state=tk.NORMAL if states["start_heating"] else tk.DISABLED)
+        self.btn_record.config(state=tk.NORMAL if states["start_recording"] else tk.DISABLED)
+        self.btn_stop_record.config(state=tk.NORMAL if states["stop_recording"] else tk.DISABLED)
+        self.btn_test_record.config(state=tk.NORMAL if states["test_record"] else tk.DISABLED)
+        self.btn_stop_heat.config(state=tk.NORMAL if states["stop_heating"] else tk.DISABLED)
 
     def open_new_test(self) -> None:
+        if self.controller.needs_save:
+            messagebox.showwarning("提示", "上一试验尚未保存记录，\n请先点击「试验记录」完成保存。")
+            return
         NewTestWindow(self, self.controller, self.user["username"])
 
     def open_test_record(self) -> None:
@@ -219,16 +281,22 @@ class MainWindow(tk.Toplevel):
         CalibrationWindow(self, self.user["username"], lambda: self.latest_data.tcal if self.latest_data else 25.0, self.refresh_calibrations)
 
     def _after_record_saved(self) -> None:
+        """试验保存后：刷新历史、清空缓存、保温待命。"""
         self.refresh_history()
-        self.controller.current_test = None
         self.controller.record_samples.clear()
         self.controller.record_seconds = 0
-        self.controller.stop_heating()
+        self.controller.mark_saved()          # needs_save=False, Complete→Preparing（保温）
+        self.controller.current_test = None   # 清空，准备下一次试验
 
     def refresh_history(self) -> None:
         for item in self.history_tree.get_children():
             self.history_tree.delete(item)
-        for row in self.db.query_tests(self.keyword_var.get() if hasattr(self, "keyword_var") else ""):
+        for row in self.db.query_tests(
+            keyword=self.keyword_var.get() if hasattr(self, "keyword_var") else "",
+            date_from=self.date_from_var.get() if hasattr(self, "date_from_var") else "",
+            date_to=self.date_to_var.get() if hasattr(self, "date_to_var") else "",
+            operator=self.history_operator_var.get() if hasattr(self, "history_operator_var") else "",
+        ):
             self.history_tree.insert("", tk.END, values=tuple(row.values()))
 
     def refresh_calibrations(self) -> None:
@@ -251,5 +319,8 @@ class MainWindow(tk.Toplevel):
 
     def _on_close(self) -> None:
         self.master.destroy()
+
+    def _open_operator_manage(self) -> None:
+        OperatorManageWindow(self)
 
     # TODO[E]: 优化按钮、颜色、表格列宽和整体布局。
