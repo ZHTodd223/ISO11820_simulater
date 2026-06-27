@@ -35,6 +35,9 @@ class TestController:
         "manual": "手动停止",
     }
 
+    # 标准 60 分钟模式——提前终止检查时间点（秒）
+    EARLY_CHECK_SECONDS = [1800, 2100, 2400, 2700, 3000, 3300]
+
     def __init__(self) -> None:
         self.state = "Idle"
         self.current_test: Optional[TestRecord] = None
@@ -50,6 +53,9 @@ class TestController:
         # 试验时长配置
         self.duration_mode: str = "standard_60min"
         self.target_duration_seconds: int = 3600
+
+        # 提前终止检查去重
+        self._checked_seconds: set[int] = set()
 
     # ── 试验时长配置 ──────────────────────────────────────────────────
 
@@ -80,6 +86,7 @@ class TestController:
         self.record_seconds = 0
         self.record_samples.clear()
         self.needs_save = False
+        self._checked_seconds.clear()
         self._message(f"已创建试验：{record.productid} / {record.testid}")
 
     def start_heating(self) -> None:
@@ -100,6 +107,7 @@ class TestController:
             return False
         self.record_seconds = 0
         self.record_samples.clear()
+        self._checked_seconds.clear()
         self._set_state("Recording")
         self._message("开始记录，计时开始")
         return True
@@ -156,6 +164,10 @@ class TestController:
                 )
                 return data
 
+            # 标准 60 分钟模式：在指定时间点检查提前终止条件
+            if self.duration_mode == "standard_60min":
+                self._check_early_termination()
+
         return data
 
     # ── 试验结果计算 ──────────────────────────────────────────────────
@@ -199,6 +211,28 @@ class TestController:
         }
 
     # ── 内部方法 ──────────────────────────────────────────────────────
+
+    def _check_early_termination(self) -> None:
+        """检查是否满足提前终止条件（标准 60 分钟模式专用）。
+
+        在 30/35/40/45/50/55 分钟时各检查一次。
+        条件：最近 10 分钟炉温漂移 < 2°C/10min（约 0.2°C/min）。
+        调用成员 C 实现的 calc_drift() 获取温漂值。
+        """
+        for early_sec in self.EARLY_CHECK_SECONDS:
+            if self.record_seconds != early_sec:
+                continue
+            if early_sec in self._checked_seconds:
+                continue
+            self._checked_seconds.add(early_sec)
+
+            drift = abs(self.simulator.calc_drift())
+            if drift < 0.2:
+                minute = early_sec // 60
+                self._auto_complete(
+                    f"满足终止条件（第 {minute} 分钟检查，温漂 {drift:.2f}℃/min），试验结束"
+                )
+            return  # 一个 tick 只触发一个检查点
 
     def _auto_complete(self, message: str) -> None:
         """自动完成试验（到达时长或满足终止条件）。"""
