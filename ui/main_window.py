@@ -31,6 +31,9 @@ COLOR = {
     "btn_warning": "#FF9800",
     "btn_danger": "#F44336",
     "btn_info": "#00BCD4",
+    "btn_disabled_bg": "#D8DEE6",
+    "btn_disabled_fg": "#7A8491",
+    "btn_disabled_border": "#B8C0CC",
     "text_dark": "#212121",
     "text_muted": "#757575",
     "log_bg": "#263238",
@@ -94,20 +97,37 @@ class MainWindow(tk.Toplevel):
         btn_bar = tk.Frame(self, bg=COLOR["bg"])
         btn_bar.pack(fill=tk.X, padx=12, pady=(8, 0))
 
-        btn_style = {"font": ("Microsoft YaHei", 9), "width": 10, "height": 1}
+        btn_style = {
+            "font": ("Microsoft YaHei", 9, "bold"),
+            "width": 10,
+            "height": 1,
+            "relief": tk.RAISED,
+            "bd": 1,
+            "highlightthickness": 1,
+            "disabledforeground": COLOR["btn_disabled_fg"],
+        }
 
         self.btn_new = tk.Button(btn_bar, text="新建试验", command=self.open_new_test,
-                                 bg=COLOR["btn_primary"], fg="white", **btn_style)
+                                 **btn_style)
         self.btn_heat = tk.Button(btn_bar, text="开始升温", command=self.controller.start_heating,
-                                  bg=COLOR["btn_warning"], fg="white", **btn_style)
+                                  **btn_style)
         self.btn_record = tk.Button(btn_bar, text="开始记录", command=self.controller.start_recording,
-                                    bg=COLOR["btn_success"], fg="white", **btn_style)
+                                    **btn_style)
         self.btn_stop_record = tk.Button(btn_bar, text="停止记录", command=self.controller.stop_recording,
-                                         bg=COLOR["btn_danger"], fg="white", **btn_style)
+                                         **btn_style)
         self.btn_test_record = tk.Button(btn_bar, text="试验记录", command=self.open_test_record,
-                                         bg="#9C27B0", fg="white", **btn_style)
+                                         **btn_style)
         self.btn_stop_heat = tk.Button(btn_bar, text="停止升温", command=self.controller.stop_heating,
-                                       bg=COLOR["btn_info"], fg="white", **btn_style)
+                                       **btn_style)
+
+        self.action_button_styles = {
+            self.btn_new: {"bg": "#1E88E5", "active": "#1565C0"},
+            self.btn_heat: {"bg": "#F57C00", "active": "#EF6C00"},
+            self.btn_record: {"bg": "#2E7D32", "active": "#1B5E20"},
+            self.btn_stop_record: {"bg": "#D32F2F", "active": "#B71C1C"},
+            self.btn_test_record: {"bg": "#7B1FA2", "active": "#6A1B9A"},
+            self.btn_stop_heat: {"bg": "#00838F", "active": "#006064"},
+        }
 
         for btn in [self.btn_new, self.btn_heat, self.btn_record,
                      self.btn_stop_record, self.btn_test_record, self.btn_stop_heat]:
@@ -116,7 +136,8 @@ class MainWindow(tk.Toplevel):
         # 管理员专有按钮
         if self.user.get("usertype") == "admin":
             self.btn_manage = tk.Button(btn_bar, text="账号管理", command=self._open_operator_manage,
-                                        bg="#607D8B", fg="white", **btn_style)
+                                        bg="#455A64", fg="white", activebackground="#37474F",
+                                        activeforeground="white", cursor="hand2", **btn_style)
             self.btn_manage.pack(side=tk.LEFT, padx=3)
 
         # ── 状态指示器 ──
@@ -411,12 +432,12 @@ class MainWindow(tk.Toplevel):
     def update_buttons(self) -> None:
         """根据控制器返回的按钮状态字典统一设置按钮可用性。"""
         states = self.controller.get_button_states()
-        self.btn_new.config(state=tk.NORMAL if states["new_test"] else tk.DISABLED)
-        self.btn_heat.config(state=tk.NORMAL if states["start_heating"] else tk.DISABLED)
-        self.btn_record.config(state=tk.NORMAL if states["start_recording"] else tk.DISABLED)
-        self.btn_stop_record.config(state=tk.NORMAL if states["stop_recording"] else tk.DISABLED)
-        self.btn_test_record.config(state=tk.NORMAL if states["test_record"] else tk.DISABLED)
-        self.btn_stop_heat.config(state=tk.NORMAL if states["stop_heating"] else tk.DISABLED)
+        self._set_action_button_state(self.btn_new, states["new_test"])
+        self._set_action_button_state(self.btn_heat, states["start_heating"])
+        self._set_action_button_state(self.btn_record, states["start_recording"])
+        self._set_action_button_state(self.btn_stop_record, states["stop_recording"])
+        self._set_action_button_state(self.btn_test_record, states["test_record"])
+        self._set_action_button_state(self.btn_stop_heat, states["stop_heating"])
 
         # 更新状态指示器颜色
         state_colors = {
@@ -427,6 +448,37 @@ class MainWindow(tk.Toplevel):
         self.status_indicator.config(fg=color)
         self.status_text.config(text=self.controller.STATES.get(self.controller.state, self.controller.state),
                                 fg=color)
+
+    def _set_action_button_state(self, button: tk.Button, enabled: bool) -> None:
+        """用更明显的视觉样式区分可点击和不可点击按钮。"""
+        style = self.action_button_styles[button]
+        if enabled:
+            button.config(
+                state=tk.NORMAL,
+                bg=style["bg"],
+                fg="white",
+                activebackground=style["active"],
+                activeforeground="white",
+                relief=tk.RAISED,
+                bd=2,
+                highlightbackground=style["active"],
+                highlightcolor=style["active"],
+                cursor="hand2",
+            )
+            return
+
+        button.config(
+            state=tk.DISABLED,
+            bg=COLOR["btn_disabled_bg"],
+            fg=COLOR["btn_disabled_fg"],
+            activebackground=COLOR["btn_disabled_bg"],
+            activeforeground=COLOR["btn_disabled_fg"],
+            relief=tk.FLAT,
+            bd=1,
+            highlightbackground=COLOR["btn_disabled_border"],
+            highlightcolor=COLOR["btn_disabled_border"],
+            cursor="arrow",
+        )
 
     def open_new_test(self) -> None:
         if self.controller.needs_save:
