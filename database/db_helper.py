@@ -45,6 +45,15 @@ class DbHelper:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def get_operator(self, username: str) -> Optional[dict]:
+        """按用户名查询操作员基础信息。"""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT userid, username, usertype FROM operators WHERE username=?",
+                (username,),
+            ).fetchone()
+        return dict(row) if row else None
+
     def add_operator(self, username: str, pwd: str, usertype: str) -> None:
         """新增操作员账号。
 

@@ -17,6 +17,7 @@ dist/
 data/*.db
 data/*.db-journal
 data/*.sqlite
+data/login_settings.json
 
 # Generated experiment outputs
 test_data/*

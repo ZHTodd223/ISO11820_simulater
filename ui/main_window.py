@@ -100,7 +100,7 @@ class MainWindow(tk.Toplevel):
 
         btn_style = {
             "font": ("Microsoft YaHei", 9, "bold"),
-            "width": 10,
+            "width": 12,
             "height": 1,
             "relief": tk.RAISED,
             "bd": 1,
@@ -132,7 +132,7 @@ class MainWindow(tk.Toplevel):
 
         for btn in [self.btn_new, self.btn_heat, self.btn_record,
                      self.btn_stop_record, self.btn_test_record, self.btn_stop_heat]:
-            btn.pack(side=tk.RIGHT, padx=3)
+            btn.pack(side=tk.RIGHT, padx=4)
 
         # 管理员专有按钮
         if self.user.get("usertype") == "admin":

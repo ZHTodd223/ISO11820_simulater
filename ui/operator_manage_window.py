@@ -13,7 +13,7 @@ class OperatorManageWindow(tk.Toplevel):
         super().__init__(master)
         self.db = DbHelper()
         self.title("操作员账号管理")
-        self.geometry("520x420")
+        self.geometry("600x430")
         self.resizable(False, False)
 
         self._build_ui()
@@ -30,9 +30,10 @@ class OperatorManageWindow(tk.Toplevel):
         self.tree.heading("username", text="用户名")
         self.tree.heading("usertype", text="角色")
         self.tree.column("userid", width=80, anchor="center")
-        self.tree.column("username", width=180)
-        self.tree.column("usertype", width=120, anchor="center")
+        self.tree.column("username", width=230)
+        self.tree.column("usertype", width=140, anchor="center")
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.tree.bind("<<TreeviewSelect>>", self._on_operator_selected)
 
         scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.tree.yview)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -46,36 +47,42 @@ class OperatorManageWindow(tk.Toplevel):
         row1.pack(fill=tk.X, pady=3)
         tk.Label(row1, text="用户名：", width=10, anchor="e").pack(side=tk.LEFT)
         self.username_var = tk.StringVar()
-        tk.Entry(row1, textvariable=self.username_var, width=20).pack(side=tk.LEFT, padx=4)
+        tk.Entry(row1, textvariable=self.username_var, width=24).pack(side=tk.LEFT, padx=4)
 
         tk.Label(row1, text="角色：", width=8, anchor="e").pack(side=tk.LEFT)
         self.usertype_var = tk.StringVar(value="operator")
-        tk.OptionMenu(row1, self.usertype_var, "operator", "admin").pack(side=tk.LEFT, padx=4)
+        ttk.Combobox(
+            row1,
+            textvariable=self.usertype_var,
+            values=("operator", "admin"),
+            state="readonly",
+            width=12,
+        ).pack(side=tk.LEFT, padx=4)
 
         row2 = tk.Frame(form_frame)
         row2.pack(fill=tk.X, pady=3)
         tk.Label(row2, text="密码：", width=10, anchor="e").pack(side=tk.LEFT)
         self.pwd_var = tk.StringVar()
-        tk.Entry(row2, textvariable=self.pwd_var, show="*", width=20).pack(side=tk.LEFT, padx=4)
+        tk.Entry(row2, textvariable=self.pwd_var, show="*", width=24).pack(side=tk.LEFT, padx=4)
 
         # ── 按钮 ──
         btn_frame = tk.Frame(form_frame)
         btn_frame.pack(fill=tk.X, pady=(6, 0))
-        tk.Button(btn_frame, text="新增操作员", command=self._add_operator, width=14).pack(
-            side=tk.LEFT, padx=4
+        tk.Button(btn_frame, text="新增操作员", command=self._add_operator, width=16).pack(
+            side=tk.LEFT, padx=6
         )
-        tk.Button(btn_frame, text="修改密码", command=self._change_password, width=14).pack(
-            side=tk.LEFT, padx=4
+        tk.Button(btn_frame, text="修改密码", command=self._change_password, width=16).pack(
+            side=tk.LEFT, padx=6
         )
-        tk.Button(btn_frame, text="删除选中", command=self._delete_operator, width=14).pack(
-            side=tk.LEFT, padx=4
+        tk.Button(btn_frame, text="删除选中", command=self._delete_operator, width=16).pack(
+            side=tk.LEFT, padx=6
         )
 
         # ── 底部 ──
-        tk.Button(self, text="刷新列表", command=self._refresh_list, width=14).pack(
+        tk.Button(self, text="刷新列表", command=self._refresh_list, width=16).pack(
             side=tk.LEFT, padx=12, pady=6
         )
-        tk.Button(self, text="关闭", command=self.destroy, width=14).pack(
+        tk.Button(self, text="关闭", command=self.destroy, width=16).pack(
             side=tk.RIGHT, padx=12, pady=6
         )
 
@@ -90,6 +97,18 @@ class OperatorManageWindow(tk.Toplevel):
                 )
         except Exception as exc:
             messagebox.showerror("查询失败", str(exc))
+
+    def _on_operator_selected(self, _event=None) -> None:
+        """选中账号时回显用户名和角色，密码等待重新输入。"""
+        selection = self.tree.selection()
+        if not selection:
+            return
+        values = self.tree.item(selection[0], "values")
+        if len(values) < 3:
+            return
+        self.username_var.set(values[1])
+        self.usertype_var.set(values[2])
+        self.pwd_var.set("")
 
     def _add_operator(self) -> None:
         username = self.username_var.get().strip()
