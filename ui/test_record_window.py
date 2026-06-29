@@ -37,7 +37,7 @@ class TestRecordWindow(tk.Toplevel):
         tk.Label(self, text="试验现象", font=("Microsoft YaHei", 10, "bold")).pack(anchor="w", padx=22, pady=(12, 4))
         row1 = tk.Frame(self)
         row1.pack(anchor="w", padx=22)
-        tk.Checkbutton(row1, text="持续火焰", variable=self.has_flame, command=self._update_conclusion).pack(side=tk.LEFT, padx=(0, 8))
+        tk.Checkbutton(row1, text="持续火焰", variable=self.has_flame, command=self._on_flame_changed).pack(side=tk.LEFT, padx=(0, 8))
         tk.Checkbutton(row1, text="烟雾", variable=self.has_smoke).pack(side=tk.LEFT, padx=(0, 8))
         tk.Checkbutton(row1, text="收缩", variable=self.has_contraction).pack(side=tk.LEFT, padx=(0, 8))
         row2 = tk.Frame(self)
@@ -47,10 +47,11 @@ class TestRecordWindow(tk.Toplevel):
         tk.Checkbutton(row2, text="开裂", variable=self.has_cracking).pack(side=tk.LEFT, padx=(0, 8))
 
         # ── 详细参数 ──
-        self._row("火焰发生时刻(s)", self.flame_time)
-        self._row("火焰持续时间(s)", self.flame_duration)
+        self.flame_time_entry = self._row("火焰发生时刻(s)", self.flame_time)
+        self.flame_duration_entry = self._row("火焰持续时间(s)", self.flame_duration)
         self._row("试验后质量(g)", self.postweight)
         self._row("备注", self.memo)
+        self._set_flame_entries_enabled(False)
 
         # ── ISO 简化判定结论预览 ──
         cf = tk.Frame(self, relief=tk.GROOVE, bd=2, padx=10, pady=6)
@@ -64,13 +65,16 @@ class TestRecordWindow(tk.Toplevel):
 
         # 绑定输入变化实时更新结论
         self.postweight.trace_add("write", lambda *_: self._update_conclusion())
+        self.flame_time.trace_add("write", lambda *_: self._update_conclusion())
         self.flame_duration.trace_add("write", lambda *_: self._update_conclusion())
 
-    def _row(self, label: str, var: tk.StringVar) -> None:
+    def _row(self, label: str, var: tk.StringVar) -> tk.Entry:
         frame = tk.Frame(self)
         frame.pack(fill=tk.X, padx=18, pady=6)
         tk.Label(frame, text=label, width=16, anchor="e").pack(side=tk.LEFT)
-        tk.Entry(frame, textvariable=var, width=24).pack(side=tk.LEFT)
+        entry = tk.Entry(frame, textvariable=var, width=24)
+        entry.pack(side=tk.LEFT)
+        return entry
 
     def save_record(self) -> None:
         try:
@@ -99,11 +103,13 @@ class TestRecordWindow(tk.Toplevel):
             else:
                 combined = orig_memo
 
+            flame_time, flame_duration = self._get_flame_values()
+
             result = self.controller.build_result(
                 postweight=float(self.postweight.get()),
                 has_flame=self.has_flame.get(),
-                flame_time=int(self.flame_time.get()),
-                flame_duration=int(self.flame_duration.get()),
+                flame_time=flame_time,
+                flame_duration=flame_duration,
                 memo=combined,
             )
             self.db.update_test_result(record, result)
@@ -117,6 +123,39 @@ class TestRecordWindow(tk.Toplevel):
             self.destroy()
         except Exception as exc:
             messagebox.showerror("保存失败", str(exc))
+
+    def _on_flame_changed(self) -> None:
+        """持续火焰勾选后才允许填写火焰时间参数。"""
+        enabled = self.has_flame.get()
+        self._set_flame_entries_enabled(enabled)
+        if not enabled:
+            self.flame_time.set("0")
+            self.flame_duration.set("0")
+        self._update_conclusion()
+
+    def _set_flame_entries_enabled(self, enabled: bool) -> None:
+        state = tk.NORMAL if enabled else tk.DISABLED
+        for entry in (self.flame_time_entry, self.flame_duration_entry):
+            entry.config(
+                state=state,
+                disabledbackground="#ECEFF1",
+                disabledforeground="#78909C",
+            )
+
+    def _get_flame_values(self) -> tuple[int, int]:
+        """读取并校验火焰时间；未勾选持续火焰时固定返回 0。"""
+        if not self.has_flame.get():
+            return 0, 0
+        try:
+            flame_time = int(self.flame_time.get())
+            flame_duration = int(self.flame_duration.get())
+        except ValueError as exc:
+            raise ValueError("火焰发生时刻和火焰持续时间必须为整数秒") from exc
+        if flame_time < 0:
+            raise ValueError("火焰发生时刻不能小于 0 秒")
+        if flame_duration <= 0:
+            raise ValueError("勾选持续火焰后，火焰持续时间必须大于 0 秒")
+        return flame_time, flame_duration
 
     def _update_conclusion(self) -> None:
         """根据已填写的预估数据实时更新 ISO 简化判定结论。"""

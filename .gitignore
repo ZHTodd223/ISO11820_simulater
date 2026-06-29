@@ -23,6 +23,8 @@ test_data/*
 !test_data/.gitkeep
 reports/*
 !reports/.gitkeep
+exports/*
+!exports/.gitkeep
 
 # Local editor settings
 .idea/

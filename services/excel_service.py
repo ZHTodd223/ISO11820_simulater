@@ -4,13 +4,12 @@ from pathlib import Path
 
 from models.sensor_data import SensorData
 from models.test_record import TestRecord
-from utils.path_utils import app_base_dir
+from services.export_paths import get_test_export_dir
 
 
 def export_excel_report(record: TestRecord, samples: list[SensorData], result: dict) -> Path:
     """导出 Excel 报告。"""
-    out_dir = app_base_dir() / "reports"
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_dir = get_test_export_dir(record)
     out_path = out_dir / f"{record.testid}_报告.xlsx"
 
     try:

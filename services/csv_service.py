@@ -5,13 +5,12 @@ from pathlib import Path
 
 from models.sensor_data import SensorData
 from models.test_record import TestRecord
-from utils.path_utils import app_base_dir
+from services.export_paths import get_test_export_dir
 
 
 def export_sensor_csv(record: TestRecord, samples: list[SensorData]) -> Path:
     """导出每秒温度数据。"""
-    out_dir = app_base_dir() / "test_data" / record.productid / record.testid
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_dir = get_test_export_dir(record)
     out_path = out_dir / "sensor_data.csv"
     try:
         with out_path.open("w", newline="", encoding="utf-8-sig") as f:

@@ -12,9 +12,9 @@
 | ACC-008 | 记录数据 | 等待一段时间 | 10 秒以上 | 记录样本持续增加 |  |  | F |
 | ACC-009 | 停止记录 | 点击停止记录 | 无 | 状态进入完成 |  |  | F |
 | ACC-010 | 填写结果 | 打开试验记录窗口 | 试验后质量 95.0，无火焰 | 保存成功 |  |  | F |
-| ACC-011 | 生成 CSV | 检查 `test_data/` | 无 | 生成 sensor_data.csv |  |  | F |
-| ACC-012 | 生成 Excel | 检查 `reports/` | 无 | 生成 xlsx 报告 |  |  | F |
-| ACC-013 | 生成 PDF | 检查 `reports/` | 无 | 生成 pdf 报告 |  |  | F |
+| ACC-011 | 生成 CSV | 检查 `exports/{productid}/{testid}/` | 无 | 生成 sensor_data.csv |  |  | F |
+| ACC-012 | 生成 Excel | 检查 `exports/{productid}/{testid}/` | 无 | 生成 xlsx 报告 |  |  | F |
+| ACC-013 | 生成 PDF | 检查 `exports/{productid}/{testid}/` | 无 | 生成 pdf 报告 |  |  | F |
 | ACC-014 | 历史查询 | 切换记录查询 Tab | 当前样品编号 | 能查到刚才的试验 |  |  | F |
 | ACC-015 | 设备校准 | 打开校准窗口并保存 | 备注“验收校准” | 校准记录保存成功 |  |  | F |
 | ACC-016 | 打包验证 | 执行 PyInstaller 命令 | 无 | `dist/` 下生成 exe |  |  | F |
