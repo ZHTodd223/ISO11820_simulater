@@ -64,7 +64,7 @@ jobs:
             $compareText = "$previousTag -> $tag"
           }
 
-          $commits = git log --pretty=format:"- %s ``%h``" $range
+          $commits = (git log --pretty=format:"- %s ``%h``" $range) -join "`n"
           if ([string]::IsNullOrWhiteSpace($commits)) {
             $commits = "- 无代码提交记录"
           }
