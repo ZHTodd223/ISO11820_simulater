@@ -16,5 +16,6 @@
 | ACC-012 | 生成 Excel | 检查 `exports/{productid}/{testid}/` | 无 | 生成 xlsx 报告 |  |  | F |
 | ACC-013 | 生成 PDF | 检查 `exports/{productid}/{testid}/` | 无 | 生成 pdf 报告 |  |  | F |
 | ACC-014 | 历史查询 | 切换记录查询 Tab | 当前样品编号 | 能查到刚才的试验 |  |  | F |
-| ACC-015 | 设备校准 | 打开校准窗口并保存 | 备注“验收校准” | 校准记录保存成功 |  |  | F |
-| ACC-016 | 打包验证 | 执行 PyInstaller 命令 | 无 | `dist/` 下生成 exe |  |  | F |
+| ACC-015 | 历史重导出 | 记录查询中选中已完成试验并点击重新导出 | 无 | 重新生成 CSV、Excel、PDF |  |  | F |
+| ACC-016 | 设备校准 | 打开校准窗口并保存 | 备注“验收校准” | 校准记录保存成功 |  |  | F |
+| ACC-017 | 打包验证 | 执行 PyInstaller 命令 | 无 | `dist/` 下生成 exe |  |  | F |

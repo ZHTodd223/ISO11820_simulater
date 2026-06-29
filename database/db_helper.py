@@ -279,7 +279,17 @@ class DbHelper:
         """查询单条试验的完整字段（供导出使用）。"""
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT * FROM testmaster WHERE productid=? AND testid=?",
+                """
+                SELECT
+                    t.*,
+                    p.productname AS productname,
+                    p.specific AS specific,
+                    p.diameter AS diameter,
+                    p.height AS height
+                FROM testmaster t
+                LEFT JOIN productmaster p ON p.productid = t.productid
+                WHERE t.productid=? AND t.testid=?
+                """,
                 (productid, testid),
             ).fetchone()
         return dict(row) if row else None

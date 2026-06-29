@@ -9,3 +9,4 @@
 | RPT-005 | Excel 导出 | 保存试验记录 | 无 | 生成 `exports/{productid}/{testid}/{testid}_报告.xlsx` |  |  | D |
 | RPT-006 | PDF 导出 | 保存试验记录 | 无 | 生成 `exports/{productid}/{testid}/{testid}_报告.pdf` |  |  | D |
 | RPT-007 | 历史更新 | 保存后查询历史 | 当前样品编号 | 能查到完成标记 |  |  | D |
+| RPT-008 | 历史重导出 | 记录查询中选中历史记录并点击重新导出 | 无 | 同一导出目录下重新生成 CSV、Excel、PDF |  |  | D |

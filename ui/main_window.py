@@ -5,6 +5,7 @@ from tkinter import messagebox, ttk
 
 from database.db_helper import DbHelper
 from services.calibration_service import CalibrationService
+from services.history_export_service import export_history_record
 from services.test_controller import TestController
 from ui.calibration_window import CalibrationHistoryWindow, CalibrationWindow
 from ui.new_test_window import NewTestWindow
@@ -292,6 +293,9 @@ class MainWindow(tk.Toplevel):
                   font=("Microsoft YaHei", 9)).pack(side=tk.LEFT, padx=(16, 4))
         tk.Button(row2, text="重置", command=self._reset_history_filters, width=8,
                   font=("Microsoft YaHei", 9)).pack(side=tk.LEFT, padx=4)
+        tk.Button(row2, text="重新导出", command=self.export_selected_history, width=10,
+                  bg=COLOR["btn_success"], fg="white",
+                  font=("Microsoft YaHei", 9)).pack(side=tk.LEFT, padx=4)
 
         # ── TreeView ──
         tree_container = tk.Frame(self.tab_history, bg=COLOR["bg"])
@@ -518,6 +522,41 @@ class MainWindow(tk.Toplevel):
             operator=self.history_operator_var.get() if hasattr(self, "history_operator_var") else "",
         ):
             self.history_tree.insert("", tk.END, values=tuple(row.values()))
+
+    def export_selected_history(self) -> None:
+        """重新导出记录查询中选中的历史试验。"""
+        selected = self.history_tree.selection()
+        if not selected:
+            messagebox.showinfo("提示", "请先在记录列表中选中一条试验记录")
+            return
+        values = self.history_tree.item(selected[0], "values")
+        if len(values) < 2:
+            messagebox.showerror("导出失败", "选中记录数据不完整")
+            return
+
+        productid, testid = values[0], values[1]
+        detail = self.db.query_test_full_detail(productid, testid)
+        if not detail:
+            messagebox.showerror("导出失败", f"未找到试验记录：{productid} / {testid}")
+            return
+
+        try:
+            paths, sample_count = export_history_record(detail)
+        except Exception as exc:
+            messagebox.showerror("导出失败", f"历史记录重新导出失败：{exc}")
+            return
+
+        sample_note = (
+            f"已读取 {sample_count} 条温度明细。"
+            if sample_count
+            else "未找到原始温度明细，CSV 仅包含表头，报告不含温度曲线数据。"
+        )
+        messagebox.showinfo(
+            "导出成功",
+            "历史记录已重新导出。\n"
+            f"{sample_note}\n\n"
+            + "\n".join(str(path) for path in paths),
+        )
 
     def refresh_calibrations(self) -> None:
         if not hasattr(self, "calibration_list"):
