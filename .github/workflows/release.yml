@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: 拉取代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 安装 Python
         uses: actions/setup-python@v5
@@ -49,21 +51,47 @@ jobs:
           name: ISO11820_Python_${{ github.ref_name }}_windows
           path: ISO11820_Python_${{ github.ref_name }}_windows.zip
 
+      - name: 生成更新日志
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $previousTag = git describe --tags --abbrev=0 "$tag^" 2>$null
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($previousTag)) {
+            $range = $tag
+            $compareText = "首次发布"
+          } else {
+            $range = "$previousTag..$tag"
+            $compareText = "$previousTag -> $tag"
+          }
+
+          $commits = git log --pretty=format:"- %s ``%h``" $range
+          if ([string]::IsNullOrWhiteSpace($commits)) {
+            $commits = "- 无代码提交记录"
+          }
+
+          @"
+          ## ISO11820 Python 仿真系统 $tag
+
+          本版本由 GitHub Actions 自动打包发布。
+
+          ### 更新日志
+          范围：$compareText
+
+          $commits
+
+          ### 包含内容
+          - Windows 单文件可执行程序：ISO11820_Python.exe
+          - 配置文件：config.json
+          - 默认 SQLite 数据库：data/ISO11820.db
+
+          ### 默认账号
+          - 管理员：admin / 123456
+          - 试验员：experimenter / 123456
+          "@ | Set-Content -Path RELEASE_NOTES.md -Encoding utf8
+
       - name: 发布到 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: ISO11820 Python 仿真系统 ${{ github.ref_name }}
           files: ISO11820_Python_${{ github.ref_name }}_windows.zip
-          body: |
-            ## ISO11820 Python 仿真系统 ${{ github.ref_name }}
-
-            本版本由 GitHub Actions 自动打包发布。
-
-            ### 包含内容
-            - Windows 单文件可执行程序：ISO11820_Python.exe
-            - 配置文件：config.json
-            - 默认 SQLite 数据库：data/ISO11820.db
-
-            ### 默认账号
-            - 管理员：admin / 123456
-            - 试验员：experimenter / 123456
+          body_path: RELEASE_NOTES.md
